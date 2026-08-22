@@ -384,7 +384,7 @@ This project is created for **FortyGuard Hackathon '26**.
 
 **Team Ultimate** 🔥
 
-| Name | Role | GitHub |
+| Name | Role | 
 |------|------|--------|
 | **Basit Ali** | Team Lead / Full Stack Developer | 
 | **Rida Punnakkotil** | AI/ML Developer & Data Analyst | 
