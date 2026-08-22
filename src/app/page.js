@@ -1034,10 +1034,7 @@ export default function Home() {
             <h3 className="text-xl font-semibold text-slate-600 mb-2">
               No City Selected
             </h3>
-            <p className="text-sm">
-              Search for a city above and click "Refresh Analysis" to get
-              started
-            </p>
+            <p className="text-sm">Search for a city above and click &quot;Refresh Analysis&quot; to get started</p>
           </div>
         )}
 
@@ -1052,7 +1049,7 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">Built with ❤️ by</span>
+<span className="text-xs text-slate-400">Built with ❤️ by</span>
               <span className="text-sm font-bold bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
                 Ultimate
               </span>

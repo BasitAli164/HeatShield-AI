@@ -364,7 +364,7 @@ export default function HeatMap({
             <div className="text-center text-slate-400">
               <div className="text-4xl mb-2">🗺️</div>
               <p className="text-sm">No heatmap data available</p>
-              <p className="text-xs mt-1">Click "Analyze Location" to load data</p>
+<p className="text-sm">Click &quot;Analyze Location&quot; to load data</p>
             </div>
           </div>
         )}

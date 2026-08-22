@@ -256,7 +256,7 @@ export default function AIExplanation({
         <div className="flex items-center justify-center py-8 text-slate-500">
           <div className="text-center">
             <Sparkles className="h-10 w-10 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Click "Analyze Location" to get AI insights</p>
+<p className="text-sm">Click &quot;Analyze Location&quot; to get AI insights</p>
             <p className="text-xs mt-1">Powered by Groq AI</p>
           </div>
         </div>

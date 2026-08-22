@@ -226,7 +226,7 @@ export default function TemperatureChart({
             <div className="text-center text-slate-400">
               <Clock className="h-10 w-10 mx-auto mb-2 opacity-50" />
               <p className="text-sm">No temperature data available</p>
-              <p className="text-xs mt-1">Click "Analyze Location" to load data</p>
+<p className="text-sm">Click &quot;Analyze Location&quot; to load data</p>
             </div>
           </div>
         </CardContent>
