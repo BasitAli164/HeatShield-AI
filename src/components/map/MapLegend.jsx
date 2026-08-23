@@ -28,7 +28,7 @@ export default function MapLegend({
   };
 
   return (
-    <Card className={`absolute ${positionClasses[position] || positionClasses['bottom-left']} z-10 shadow-lg border-slate-200 w-[180px] ${className}`}>
+    <Card className={`absolute ${positionClasses[position] || positionClasses['bottom-left']} z-10 shadow-lg border-slate-200 w-[180px] bg-white ${className}`}>
       <CardContent className="p-3">
         <div className="space-y-1">
           <p className="text-xs font-medium text-slate-700 mb-2">Temperature</p>
