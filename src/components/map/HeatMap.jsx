@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 
 // Import components
@@ -17,7 +17,7 @@ import {
   isHotspot
 } from '@/lib/geo/heatmap-utils';
 
-// ✅ Dynamic imports with ssr: false
+// ✅ Dynamic imports with ssr: false - WORKS WITH V5 RC
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
   { ssr: false }
@@ -98,23 +98,20 @@ export default function HeatMap({
   showControls = true,
   showLegend = true,
 }) {
-  const [isMounted, setIsMounted] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [L, setL] = useState(null);
-  const mapRef = useRef(null);
-  const containerRef = useRef(null);
   const [hotspots, setHotspots] = useState([]);
   const [stats, setStats] = useState({ min: null, max: null, mean: null, count: 0, hotspots: 0 });
 
-  // ✅ Generate unique key for map - changes when center changes
-  const mapKey = useMemo(() => {
+  // ✅ Use a simple key based on location
+  const mapKey = React.useMemo(() => {
     const lat = getCenterLat(center);
     const lng = getCenterLng(center);
-    return `map-${lat}-${lng}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    return `map-${lat}-${lng}`;
   }, [center]);
 
-  // ✅ Load Leaflet on client
   useEffect(() => {
-    setIsMounted(true);
+    setIsClient(true);
     import('leaflet').then((leaflet) => {
       setL(leaflet);
       delete leaflet.Icon.Default.prototype._getIconUrl;
@@ -125,34 +122,6 @@ export default function HeatMap({
       });
     });
   }, []);
-
-  // ✅ CRITICAL: Cleanup map on unmount and when center changes
-  useEffect(() => {
-    // ✅ This runs when component mounts or center changes
-    
-    // ✅ Return cleanup function
-    return () => {
-      // ✅ Completely destroy the map instance
-      if (mapRef.current) {
-        try {
-          // ✅ Remove the map from DOM
-          mapRef.current.remove();
-          mapRef.current = null;
-        } catch (e) {
-          // Ignore cleanup errors
-        }
-      }
-      
-      // ✅ Clear the container's inner HTML to remove any leftover map elements
-      if (containerRef.current) {
-        try {
-          containerRef.current.innerHTML = '';
-        } catch (e) {
-          // Ignore
-        }
-      }
-    };
-  }, [center]); // ✅ Re-run cleanup when center changes
 
   // Calculate statistics and hotspots from GeoJSON
   useEffect(() => {
@@ -263,8 +232,7 @@ export default function HeatMap({
     }
   }, [onHotspotSelect, onLocationSelect]);
 
-  // ✅ Don't render on server
-  if (!isMounted) {
+  if (!isClient) {
     return <MapLoading message="Loading map..." subMessage="Initializing map component" className={className} />;
   }
 
@@ -276,14 +244,10 @@ export default function HeatMap({
   const centerLng = getCenterLng(center);
 
   return (
-    <div 
-      ref={containerRef}
-      className={`relative h-[400px] w-full rounded-lg overflow-hidden ${className}`}
-    >
-      {/* ✅ Use key to force re-mount when center changes */}
+    <div className={`relative h-[400px] w-full rounded-lg overflow-hidden ${className}`}>
+      {/* ✅ With v5 RC, the key approach works correctly */}
       <MapContainer
         key={mapKey}
-        ref={mapRef}
         center={[centerLat, centerLng]}
         zoom={zoom}
         style={{ height: '100%', width: '100%' }}
@@ -352,33 +316,11 @@ export default function HeatMap({
       {showControls && (
         <MapControls
           onZoomIn={() => {
-            if (mapRef.current) {
-              try {
-                mapRef.current.setZoom(mapRef.current.getZoom() + 1);
-              } catch (e) {}
-            }
+            // Zoom handled by Leaflet controls
           }}
-          onZoomOut={() => {
-            if (mapRef.current) {
-              try {
-                mapRef.current.setZoom(mapRef.current.getZoom() - 1);
-              } catch (e) {}
-            }
-          }}
-          onReset={() => {
-            if (mapRef.current) {
-              try {
-                mapRef.current.setView([centerLat, centerLng], 12);
-              } catch (e) {}
-            }
-          }}
-          onCenterLocation={() => {
-            if (mapRef.current) {
-              try {
-                mapRef.current.setView([centerLat, centerLng], 15);
-              } catch (e) {}
-            }
-          }}
+          onZoomOut={() => {}}
+          onReset={() => {}}
+          onCenterLocation={() => {}}
           onToggleLayer={() => {}}
           onRefresh={() => {
             if (onLocationSelect && center) {
