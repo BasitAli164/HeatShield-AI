@@ -98,11 +98,8 @@ export default function RiskScore({
           </div>
         </div>
 
-        <Progress 
-          value={score} 
-          className="h-2 bg-slate-100" 
-          indicatorClassName={getScoreColor(score)}
-        />
+        <Progress value={score} className="h-2 bg-slate-100" />
+
 
         {showDetails && factors && factors.length > 0 && (
           <div className="mt-4 pt-4 border-t border-slate-200">

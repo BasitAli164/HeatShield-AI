@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 
-// ✅ Import components with dynamic imports
+// Import components
 import MapLegend from './MapLegend';
 import HotspotMarker from './HotspotMarker';
 import MapLoading from './MapLoading';
@@ -42,47 +42,6 @@ const Popup = dynamic(
   () => import('react-leaflet').then((mod) => mod.Popup),
   { ssr: false }
 );
-
-// ✅ Map controller component - FIXED
-const MapController = ({ center, zoom, onMove }) => {
-  const [map, setMap] = useState(null);
-  
-  useEffect(() => {
-    import('react-leaflet').then(({ useMap }) => {
-      try {
-        const mapInstance = useMap();
-        setMap(mapInstance);
-      } catch (error) {
-        console.warn('[MapController] Error getting map instance:', error);
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    if (map && center) {
-      map.setView(center, zoom || 12);
-    }
-  }, [center, zoom, map]);
-
-  useEffect(() => {
-    if (map && onMove) {
-      const handleMove = () => {
-        const center = map.getCenter();
-        onMove({
-          latitude: center.lat,
-          longitude: center.lng,
-          zoom: map.getZoom(),
-        });
-      };
-      map.on('moveend', handleMove);
-      return () => {
-        map.off('moveend', handleMove);
-      };
-    }
-  }, [map, onMove]);
-
-  return null;
-};
 
 // ✅ Helper to safely format coordinates
 const formatCoord = (coord) => {
@@ -141,22 +100,59 @@ export default function HeatMap({
 }) {
   const [isMounted, setIsMounted] = useState(false);
   const [L, setL] = useState(null);
-  const mapRef = useRef();
+  const mapRef = useRef(null);
+  const containerRef = useRef(null);
   const [hotspots, setHotspots] = useState([]);
   const [stats, setStats] = useState({ min: null, max: null, mean: null, count: 0, hotspots: 0 });
 
+  // ✅ Generate unique key for map - changes when center changes
+  const mapKey = useMemo(() => {
+    const lat = getCenterLat(center);
+    const lng = getCenterLng(center);
+    return `map-${lat}-${lng}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  }, [center]);
+
+  // ✅ Load Leaflet on client
   useEffect(() => {
     setIsMounted(true);
     import('leaflet').then((leaflet) => {
       setL(leaflet);
       delete leaflet.Icon.Default.prototype._getIconUrl;
       leaflet.Icon.Default.mergeOptions({
-        iconRetinaUrl: '/leaflet/images/marker-icon-2x.png',
-        iconUrl: '/leaflet/images/marker-icon.png',
-        shadowUrl: '/leaflet/images/marker-shadow.png',
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
       });
     });
   }, []);
+
+  // ✅ CRITICAL: Cleanup map on unmount and when center changes
+  useEffect(() => {
+    // ✅ This runs when component mounts or center changes
+    
+    // ✅ Return cleanup function
+    return () => {
+      // ✅ Completely destroy the map instance
+      if (mapRef.current) {
+        try {
+          // ✅ Remove the map from DOM
+          mapRef.current.remove();
+          mapRef.current = null;
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+      
+      // ✅ Clear the container's inner HTML to remove any leftover map elements
+      if (containerRef.current) {
+        try {
+          containerRef.current.innerHTML = '';
+        } catch (e) {
+          // Ignore
+        }
+      }
+    };
+  }, [center]); // ✅ Re-run cleanup when center changes
 
   // Calculate statistics and hotspots from GeoJSON
   useEffect(() => {
@@ -175,7 +171,7 @@ export default function HeatMap({
   }, [geojsonData]);
 
   // Point to layer function for GeoJSON
-  const pointToLayer = (feature, latlng) => {
+  const pointToLayer = useCallback((feature, latlng) => {
     if (!L) return null;
     
     const temp = feature.properties?.temperature || 25;
@@ -190,10 +186,10 @@ export default function HeatMap({
       opacity: 0.8,
       fillOpacity: 0.6,
     });
-  };
+  }, [L]);
 
   // Style function for GeoJSON features
-  const style = (feature) => {
+  const style = useCallback((feature) => {
     const temp = feature.properties?.temperature || 25;
     const color = getTemperatureColor(temp);
     return {
@@ -204,15 +200,14 @@ export default function HeatMap({
       fillOpacity: 0.5,
       radius: getTemperatureRadius(temp),
     };
-  };
+  }, []);
 
   // On each feature function
-  const onEachFeature = (feature, layer) => {
+  const onEachFeature = useCallback((feature, layer) => {
     if (feature.properties && feature.properties.temperature) {
       const temp = feature.properties.temperature;
       const riskScore = feature.properties.riskScore;
       
-      // ✅ Get coordinates safely
       const coords = feature.geometry?.coordinates || [];
       const lat = coords.length > 1 ? coords[1] : null;
       const lng = coords.length > 0 ? coords[0] : null;
@@ -256,63 +251,17 @@ export default function HeatMap({
         }
       });
     }
-  };
+  }, [onLocationSelect]);
 
   // Handle hotspot select
-  const handleHotspotSelect = (hotspotData) => {
+  const handleHotspotSelect = useCallback((hotspotData) => {
     if (onHotspotSelect) {
       onHotspotSelect(hotspotData);
     }
     if (onLocationSelect) {
       onLocationSelect(hotspotData);
     }
-  };
-
-  // Handle zoom controls
-  const handleZoomIn = () => {
-    if (mapRef.current) {
-      const map = mapRef.current;
-      map.setZoom(map.getZoom() + 1);
-    }
-  };
-
-  const handleZoomOut = () => {
-    if (mapRef.current) {
-      const map = mapRef.current;
-      map.setZoom(map.getZoom() - 1);
-    }
-  };
-
-  const handleResetView = () => {
-    if (mapRef.current) {
-      const centerLat = getCenterLat(center);
-      const centerLng = getCenterLng(center);
-      mapRef.current.setView([centerLat, centerLng], 12);
-    }
-  };
-
-  const handleCenterLocation = () => {
-    if (mapRef.current) {
-      const centerLat = getCenterLat(center);
-      const centerLng = getCenterLng(center);
-      mapRef.current.setView([centerLat, centerLng], 15);
-    }
-  };
-
-  const handleToggleLayer = () => {
-    console.log('Toggle layer');
-  };
-
-  const handleRefresh = () => {
-    if (onLocationSelect && center) {
-      const centerLat = getCenterLat(center);
-      const centerLng = getCenterLng(center);
-      onLocationSelect({
-        latitude: centerLat,
-        longitude: centerLng,
-      });
-    }
-  };
+  }, [onHotspotSelect, onLocationSelect]);
 
   // ✅ Don't render on server
   if (!isMounted) {
@@ -327,8 +276,13 @@ export default function HeatMap({
   const centerLng = getCenterLng(center);
 
   return (
-    <div className={`relative h-[400px] w-full rounded-lg overflow-hidden ${className}`}>
+    <div 
+      ref={containerRef}
+      className={`relative h-[400px] w-full rounded-lg overflow-hidden ${className}`}
+    >
+      {/* ✅ Use key to force re-mount when center changes */}
       <MapContainer
+        key={mapKey}
         ref={mapRef}
         center={[centerLat, centerLng]}
         zoom={zoom}
@@ -339,12 +293,6 @@ export default function HeatMap({
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-        
-        <MapController 
-          center={[centerLat, centerLng]} 
-          zoom={zoom}
-          onMove={onMapMove}
         />
         
         {/* GeoJSON Data */}
@@ -403,12 +351,43 @@ export default function HeatMap({
       {/* Map Controls */}
       {showControls && (
         <MapControls
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onReset={handleResetView}
-          onCenterLocation={handleCenterLocation}
-          onToggleLayer={handleToggleLayer}
-          onRefresh={handleRefresh}
+          onZoomIn={() => {
+            if (mapRef.current) {
+              try {
+                mapRef.current.setZoom(mapRef.current.getZoom() + 1);
+              } catch (e) {}
+            }
+          }}
+          onZoomOut={() => {
+            if (mapRef.current) {
+              try {
+                mapRef.current.setZoom(mapRef.current.getZoom() - 1);
+              } catch (e) {}
+            }
+          }}
+          onReset={() => {
+            if (mapRef.current) {
+              try {
+                mapRef.current.setView([centerLat, centerLng], 12);
+              } catch (e) {}
+            }
+          }}
+          onCenterLocation={() => {
+            if (mapRef.current) {
+              try {
+                mapRef.current.setView([centerLat, centerLng], 15);
+              } catch (e) {}
+            }
+          }}
+          onToggleLayer={() => {}}
+          onRefresh={() => {
+            if (onLocationSelect && center) {
+              onLocationSelect({
+                latitude: centerLat,
+                longitude: centerLng,
+              });
+            }
+          }}
           isLoading={isLoading}
         />
       )}

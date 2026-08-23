@@ -1,7 +1,5 @@
 import './globals.css';
-
 import { Inter } from 'next/font/google';
-import { validateConfig } from '@/lib/fortyguard/config';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -14,16 +12,17 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
-  // Log configuration status (server-side only)
-  if (typeof window === 'undefined') {
-    const isConfigured = validateConfig();
-    if (!isConfigured) {
-      console.warn('⚠️ FortyGuard API not configured. Please set FORTYGUARD_API_KEY in .env.local');
-    }
-  }
-
   return (
     <html lang="en">
+      <head>
+        {/* ✅ Load Leaflet CSS from CDN */}
+        <link 
+          rel="stylesheet" 
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossOrigin=""
+        />
+      </head>
       <body className={inter.className}>
         {children}
       </body>
