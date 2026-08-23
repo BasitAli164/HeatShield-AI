@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
 
 export default function KPI({ title, value, subtitle, icon, trend, className }) {
