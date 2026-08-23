@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import 'leaflet/dist/leaflet.css';
 
 // ✅ Import components with dynamic imports
 import MapLegend from './MapLegend';
