@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/Button';
 import { Search, MapPin, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { isUSLocation } from '@/lib/geo/coordinates';

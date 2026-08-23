@@ -1,7 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Marker, Popup } from 'react-leaflet';
+import dynamic from 'next/dynamic';
+
+// ✅ Dynamic import for Marker and Popup to avoid SSR issues
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+);
+
+const Popup = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Popup),
+  { ssr: false }
+);
 
 export default function HotspotMarker({ 
   feature, 
@@ -9,14 +20,17 @@ export default function HotspotMarker({
   size = 'medium',
 }) {
   const [L, setL] = useState(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     import('leaflet').then((leaflet) => {
       setL(leaflet);
     });
   }, []);
 
-  if (!L) return null;
+  // Don't render on server
+  if (!isMounted || !L) return null;
 
   const temp = feature.properties?.temperature || 0;
   const isHotspot = temp >= 35;
@@ -66,11 +80,16 @@ export default function HotspotMarker({
     iconAnchor: [finalSize/2, finalSize/2],
   });
 
+  // ✅ Safely get coordinates
+  const coords = feature.geometry?.coordinates || [];
+  const lat = coords.length > 1 ? coords[1] : 0;
+  const lng = coords.length > 0 ? coords[0] : 0;
+
   const handleClick = () => {
     if (onSelect) {
       onSelect({
-        latitude: feature.geometry.coordinates[1],
-        longitude: feature.geometry.coordinates[0],
+        latitude: lat,
+        longitude: lng,
         temperature: temp,
         ...feature.properties,
       });
@@ -79,7 +98,7 @@ export default function HotspotMarker({
 
   return (
     <Marker
-      position={[feature.geometry.coordinates[1], feature.geometry.coordinates[0]]}
+      position={[lat, lng]}
       icon={icon}
       eventHandlers={{
         click: handleClick,

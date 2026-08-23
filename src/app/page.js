@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import dynamic from 'next/dynamic';
+
 import {
   Thermometer,
   Clock,
@@ -29,7 +31,6 @@ import TrendChart from "@/components/charts/TrendChart";
 import AIExplanation from "@/components/ai/AIExplanation";
 import Recommendations from "@/components/ai/Recommendations";
 import LocationSearch from "@/components/map/LocationSearch";
-import HeatMap from "@/components/map/HeatMap";
 import ActivityProgress from "@/components/shared/ActivityProgress";
 
 // ✅ NEW: Vulnerability Profile import
@@ -53,6 +54,12 @@ import {
 
 // Import forecast utilities
 import { generateForecast, calculateTrend } from "@/lib/forecast/trend.js";
+
+// ✅ DYNAMIC IMPORT - HeatMap uses Leaflet which needs window
+const HeatMap = dynamic(
+  () => import('@/components/map/HeatMap'),
+  { ssr: false }
+);
 
 // Generate fallback demo data (only for error cases)
 const generateFallbackData = () => {

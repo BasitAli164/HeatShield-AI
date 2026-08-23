@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
 
-// Import integrated components
+// ✅ Import components with dynamic imports
 import MapLegend from './MapLegend';
 import HotspotMarker from './HotspotMarker';
 import MapLoading from './MapLoading';
@@ -18,7 +18,7 @@ import {
   isHotspot
 } from '@/lib/geo/heatmap-utils';
 
-// Dynamically import Leaflet components to avoid SSR issues
+// ✅ Dynamic imports with ssr: false
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
   { ssr: false }
@@ -44,7 +44,7 @@ const Popup = dynamic(
   { ssr: false }
 );
 
-// Map controller component
+// ✅ Map controller component - FIXED
 const MapController = ({ center, zoom, onMove }) => {
   const [map, setMap] = useState(null);
   
@@ -85,13 +85,11 @@ const MapController = ({ center, zoom, onMove }) => {
   return null;
 };
 
-// ✅ FIXED: Helper to safely format coordinates
+// ✅ Helper to safely format coordinates
 const formatCoord = (coord) => {
-  // Check if coord is a valid number
   if (coord === undefined || coord === null || isNaN(coord)) {
     return '--';
   }
-  // If coord is a string that can be parsed, parse it
   if (typeof coord === 'string') {
     const parsed = parseFloat(coord);
     if (!isNaN(parsed)) {
@@ -99,7 +97,6 @@ const formatCoord = (coord) => {
     }
     return '--';
   }
-  // If coord is a number
   if (typeof coord === 'number') {
     return coord.toFixed(4);
   }
@@ -216,7 +213,7 @@ export default function HeatMap({
       const temp = feature.properties.temperature;
       const riskScore = feature.properties.riskScore;
       
-      // ✅ Safely get coordinates
+      // ✅ Get coordinates safely
       const coords = feature.geometry?.coordinates || [];
       const lat = coords.length > 1 ? coords[1] : null;
       const lng = coords.length > 0 ? coords[0] : null;
@@ -318,7 +315,7 @@ export default function HeatMap({
     }
   };
 
-  // Don't render on server
+  // ✅ Don't render on server
   if (!isMounted) {
     return <MapLoading message="Loading map..." subMessage="Initializing map component" className={className} />;
   }
@@ -364,7 +361,7 @@ export default function HeatMap({
             <div className="text-center text-slate-400">
               <div className="text-4xl mb-2">🗺️</div>
               <p className="text-sm">No heatmap data available</p>
-<p className="text-sm">Click &quot;Analyze Location&quot; to load data</p>
+              <p className="text-xs mt-1">Click &quot;Analyze Location&quot; to load data</p>
             </div>
           </div>
         )}
