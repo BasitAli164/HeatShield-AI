@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 
 // Import components
@@ -17,7 +17,7 @@ import {
   isHotspot
 } from '@/lib/geo/heatmap-utils';
 
-// ✅ Dynamic imports with ssr: false - WORKS WITH V5 RC
+// ✅ Dynamic imports with ssr: false
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
   { ssr: false }
@@ -33,17 +33,7 @@ const GeoJSON = dynamic(
   { ssr: false }
 );
 
-const Marker = dynamic(
-  () => import('react-leaflet').then((mod) => mod.Marker),
-  { ssr: false }
-);
-
-const Popup = dynamic(
-  () => import('react-leaflet').then((mod) => mod.Popup),
-  { ssr: false }
-);
-
-// ✅ Helper to safely format coordinates
+// ✅ Helper functions
 const formatCoord = (coord) => {
   if (coord === undefined || coord === null || isNaN(coord)) {
     return '--';
@@ -61,7 +51,6 @@ const formatCoord = (coord) => {
   return '--';
 };
 
-// ✅ Helper to get latitude from center
 const getCenterLat = (center) => {
   if (!center) return 33.4484;
   if (Array.isArray(center)) {
@@ -73,7 +62,6 @@ const getCenterLat = (center) => {
   return 33.4484;
 };
 
-// ✅ Helper to get longitude from center
 const getCenterLng = (center) => {
   if (!center) return -112.0740;
   if (Array.isArray(center)) {
@@ -85,7 +73,6 @@ const getCenterLng = (center) => {
   return -112.0740;
 };
 
-// Main HeatMap Component
 export default function HeatMap({ 
   geojsonData, 
   center = [33.4484, -112.0740], 
@@ -100,14 +87,19 @@ export default function HeatMap({
 }) {
   const [isClient, setIsClient] = useState(false);
   const [L, setL] = useState(null);
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+  const circleRef = useRef(null);
+  const innerCircleRef = useRef(null);
   const [hotspots, setHotspots] = useState([]);
   const [stats, setStats] = useState({ min: null, max: null, mean: null, count: 0, hotspots: 0 });
+  const [markerCreated, setMarkerCreated] = useState(false);
 
-  // ✅ Use a simple key based on location
-  const mapKey = React.useMemo(() => {
+  // ✅ Force map re-mount when center changes
+  const mapKey = useMemo(() => {
     const lat = getCenterLat(center);
     const lng = getCenterLng(center);
-    return `map-${lat}-${lng}`;
+    return `map-${lat}-${lng}-${Date.now()}`;
   }, [center]);
 
   useEffect(() => {
@@ -123,12 +115,176 @@ export default function HeatMap({
     });
   }, []);
 
-  // Calculate statistics and hotspots from GeoJSON
+  // ✅ Create marker function
+  const createMarker = useCallback(() => {
+    if (!isClient || !L || !mapRef.current || !center) return;
+
+    const map = mapRef.current;
+    const centerLat = getCenterLat(center);
+    const centerLng = getCenterLng(center);
+
+    // Remove existing marker and circles
+    if (markerRef.current) {
+      try {
+        markerRef.current.remove();
+        markerRef.current = null;
+      } catch (e) {}
+    }
+    if (circleRef.current) {
+      try {
+        circleRef.current.remove();
+        circleRef.current = null;
+      } catch (e) {}
+    }
+    if (innerCircleRef.current) {
+      try {
+        innerCircleRef.current.remove();
+        innerCircleRef.current = null;
+      } catch (e) {}
+    }
+
+    console.log('[HeatMap] Creating marker for:', centerLat, centerLng);
+
+    // ✅ Create PULSING CIRCLE
+    const circle = L.circle([centerLat, centerLng], {
+      radius: 30,
+      color: '#ef4444',
+      fillColor: '#ef4444',
+      fillOpacity: 0.15,
+      weight: 2,
+      opacity: 0.5,
+    });
+    circle.addTo(map);
+    circleRef.current = circle;
+
+    // ✅ Animate circle using requestAnimationFrame
+    let startTime = Date.now();
+    let animationId = null;
+    const animatePulse = () => {
+      if (!circleRef.current) return;
+      const elapsed = (Date.now() - startTime) / 1000;
+      const pulse = 0.3 + 0.7 * Math.sin(elapsed * 2 * Math.PI / 2);
+      const radius = 15 + 30 * (1 - pulse);
+      try {
+        circleRef.current.setRadius(radius);
+      } catch (e) {}
+      animationId = requestAnimationFrame(animatePulse);
+    };
+    animatePulse();
+
+    // ✅ Create RED DOT MARKER
+    const icon = L.divIcon({
+      className: 'location-marker',
+      html: `
+        <div style="
+          width: 16px;
+          height: 16px;
+          background-color: #ef4444;
+          border-radius: 50%;
+          border: 3px solid white;
+          box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+          position: relative;
+          z-index: 10;
+          cursor: pointer;
+        ">
+          <div style="
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 6px;
+            height: 6px;
+            background-color: white;
+            border-radius: 50%;
+            opacity: 0.7;
+          "></div>
+        </div>
+      `,
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
+      popupAnchor: [0, -8],
+    });
+
+    const marker = L.marker([centerLat, centerLng], { icon });
+    marker.addTo(map);
+    markerRef.current = marker;
+
+    // Bind popup
+    marker.bindPopup(`
+      <div class="text-center">
+        <p class="font-bold text-lg">📍 Selected Location</p>
+        <p class="text-sm text-slate-500">${formatCoord(centerLat)}, ${formatCoord(centerLng)}</p>
+      </div>
+    `);
+
+    // ✅ Inner static circle
+    const innerCircle = L.circle([centerLat, centerLng], {
+      radius: 12,
+      color: '#ef4444',
+      fillColor: '#ef4444',
+      fillOpacity: 0.3,
+      weight: 1,
+      opacity: 0.3,
+    });
+    innerCircle.addTo(map);
+    innerCircleRef.current = innerCircle;
+
+    setMarkerCreated(true);
+
+    // Cleanup animation
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+    };
+  }, [center, isClient, L]);
+
+  // ✅ Create marker when map is ready
+  useEffect(() => {
+    if (isClient && L && mapRef.current && center) {
+      // Small delay to ensure map is fully loaded
+      const timer = setTimeout(() => {
+        createMarker();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [center, isClient, L, createMarker]);
+
+  // ✅ Also create marker when map container changes
+  useEffect(() => {
+    if (isClient && L && mapRef.current && center) {
+      createMarker();
+    }
+  }, [mapKey, center, isClient, L, createMarker]);
+
+  // ✅ Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (markerRef.current) {
+        try {
+          markerRef.current.remove();
+          markerRef.current = null;
+        } catch (e) {}
+      }
+      if (circleRef.current) {
+        try {
+          circleRef.current.remove();
+          circleRef.current = null;
+        } catch (e) {}
+      }
+      if (innerCircleRef.current) {
+        try {
+          innerCircleRef.current.remove();
+          innerCircleRef.current = null;
+        } catch (e) {}
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (geojsonData && geojsonData.features) {
       const calculatedStats = calculateHeatmapStats(geojsonData);
       setStats(calculatedStats);
-      
       const hotFeatures = geojsonData.features.filter(
         f => f.properties?.temperature && isHotspot(f.properties.temperature)
       );
@@ -139,14 +295,11 @@ export default function HeatMap({
     }
   }, [geojsonData]);
 
-  // Point to layer function for GeoJSON
   const pointToLayer = useCallback((feature, latlng) => {
     if (!L) return null;
-    
     const temp = feature.properties?.temperature || 25;
     const color = getTemperatureColor(temp);
     const radius = getTemperatureRadius(temp);
-    
     return L.circleMarker(latlng, {
       radius: radius,
       fillColor: color,
@@ -157,7 +310,6 @@ export default function HeatMap({
     });
   }, [L]);
 
-  // Style function for GeoJSON features
   const style = useCallback((feature) => {
     const temp = feature.properties?.temperature || 25;
     const color = getTemperatureColor(temp);
@@ -171,12 +323,10 @@ export default function HeatMap({
     };
   }, []);
 
-  // On each feature function
   const onEachFeature = useCallback((feature, layer) => {
     if (feature.properties && feature.properties.temperature) {
       const temp = feature.properties.temperature;
       const riskScore = feature.properties.riskScore;
-      
       const coords = feature.geometry?.coordinates || [];
       const lat = coords.length > 1 ? coords[1] : null;
       const lng = coords.length > 0 ? coords[0] : null;
@@ -222,7 +372,6 @@ export default function HeatMap({
     }
   }, [onLocationSelect]);
 
-  // Handle hotspot select
   const handleHotspotSelect = useCallback((hotspotData) => {
     if (onHotspotSelect) {
       onHotspotSelect(hotspotData);
@@ -231,6 +380,54 @@ export default function HeatMap({
       onLocationSelect(hotspotData);
     }
   }, [onHotspotSelect, onLocationSelect]);
+
+  // ✅ Zoom controls
+  const handleZoomIn = useCallback(() => {
+    if (mapRef.current) {
+      try {
+        mapRef.current.setZoom(mapRef.current.getZoom() + 1);
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    if (mapRef.current) {
+      try {
+        mapRef.current.setZoom(mapRef.current.getZoom() - 1);
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleResetView = useCallback(() => {
+    if (mapRef.current) {
+      try {
+        const centerLat = getCenterLat(center);
+        const centerLng = getCenterLng(center);
+        mapRef.current.setView([centerLat, centerLng], 12);
+      } catch (e) {}
+    }
+  }, [center]);
+
+  const handleCenterLocation = useCallback(() => {
+    if (mapRef.current) {
+      try {
+        const centerLat = getCenterLat(center);
+        const centerLng = getCenterLng(center);
+        mapRef.current.setView([centerLat, centerLng], 15);
+      } catch (e) {}
+    }
+  }, [center]);
+
+  const handleRefresh = useCallback(() => {
+    if (onLocationSelect && center) {
+      const centerLat = getCenterLat(center);
+      const centerLng = getCenterLng(center);
+      onLocationSelect({
+        latitude: centerLat,
+        longitude: centerLng,
+      });
+    }
+  }, [center, onLocationSelect]);
 
   if (!isClient) {
     return <MapLoading message="Loading map..." subMessage="Initializing map component" className={className} />;
@@ -242,12 +439,13 @@ export default function HeatMap({
 
   const centerLat = getCenterLat(center);
   const centerLng = getCenterLng(center);
+  const hasGeoJSON = geojsonData && geojsonData.features && geojsonData.features.length > 0;
 
   return (
     <div className={`relative h-[400px] w-full rounded-lg overflow-hidden ${className}`}>
-      {/* ✅ With v5 RC, the key approach works correctly */}
       <MapContainer
         key={mapKey}
+        ref={mapRef}
         center={[centerLat, centerLng]}
         zoom={zoom}
         style={{ height: '100%', width: '100%' }}
@@ -260,7 +458,7 @@ export default function HeatMap({
         />
         
         {/* GeoJSON Data */}
-        {geojsonData && geojsonData.features && geojsonData.features.length > 0 ? (
+        {hasGeoJSON ? (
           <GeoJSON
             data={geojsonData}
             pointToLayer={pointToLayer}
@@ -278,7 +476,7 @@ export default function HeatMap({
         )}
         
         {/* Hotspot Markers */}
-        {hotspots.map((feature, index) => (
+        {hotspots.length > 0 && hotspots.map((feature, index) => (
           <HotspotMarker 
             key={index}
             feature={feature}
@@ -286,20 +484,6 @@ export default function HeatMap({
             size="medium"
           />
         ))}
-        
-        {/* Selected Location Marker */}
-        {center && (
-          <Marker position={[centerLat, centerLng]}>
-            <Popup>
-              <div className="text-center">
-                <p className="font-bold">📍 Selected Location</p>
-                <p className="text-sm text-slate-500">
-                  {formatCoord(centerLat)}, {formatCoord(centerLng)}
-                </p>
-              </div>
-            </Popup>
-          </Marker>
-        )}
       </MapContainer>
       
       {/* Legend */}
@@ -307,7 +491,7 @@ export default function HeatMap({
         <MapLegend 
           minTemp={stats.min}
           maxTemp={stats.max}
-          hotspots={stats.hotspots}
+          hotspots={stats.hotspots || hotspots.length}
           position="bottom-left"
         />
       )}
@@ -315,30 +499,21 @@ export default function HeatMap({
       {/* Map Controls */}
       {showControls && (
         <MapControls
-          onZoomIn={() => {
-            // Zoom handled by Leaflet controls
-          }}
-          onZoomOut={() => {}}
-          onReset={() => {}}
-          onCenterLocation={() => {}}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onReset={handleResetView}
+          onCenterLocation={handleCenterLocation}
           onToggleLayer={() => {}}
-          onRefresh={() => {
-            if (onLocationSelect && center) {
-              onLocationSelect({
-                latitude: centerLat,
-                longitude: centerLng,
-              });
-            }
-          }}
+          onRefresh={handleRefresh}
           isLoading={isLoading}
         />
       )}
       
       {/* Data Info */}
-      {geojsonData && geojsonData.features && geojsonData.features.length > 0 && (
+      {hasGeoJSON && (
         <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-lg border border-slate-200 z-10">
           <span className="text-xs text-slate-500">
-            {geojsonData.features.length} points • {stats.count} readings
+            {geojsonData.features.length} points • {stats.count || geojsonData.features.length} readings
           </span>
         </div>
       )}

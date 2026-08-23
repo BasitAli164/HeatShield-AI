@@ -14,7 +14,6 @@ import {
   Wind,
   Shield,
   Sparkles,
-  Calendar,
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 
@@ -32,8 +31,6 @@ import AIExplanation from "@/components/ai/AIExplanation";
 import Recommendations from "@/components/ai/Recommendations";
 import LocationSearch from "@/components/map/LocationSearch";
 import ActivityProgress from "@/components/shared/ActivityProgress";
-
-// ✅ NEW: Vulnerability Profile import
 import VulnerabilityProfile from "@/components/risk/VulnerabilityProfile";
 
 // Import utilities
@@ -41,7 +38,7 @@ import { formatTime } from "@/lib/utils";
 import { DEFAULT_LOCATION } from "@/lib/constants";
 import { isUSLocation } from "@/lib/geo/coordinates";
 
-// ✅ NEW: Vulnerability utilities import
+// Import vulnerability utilities
 import { identifyAffectedGroups, getVulnerabilitySummary } from "@/lib/risk/vulnerability";
 
 // Import timezone utilities
@@ -259,7 +256,7 @@ export default function Home() {
   const [geojsonData, setGeojsonData] = useState(null);
   const [vulnerabilityData, setVulnerabilityData] = useState(null);
 
-  // Load initial demo data - NO location selected
+  // Load initial - NO location selected
   useEffect(() => {
     setLastUpdated(formatTimeWithTimezone(new Date()));
   }, []);
@@ -475,6 +472,7 @@ export default function Home() {
         console.warn("Heatmap API error:", heatmapError);
       }
 
+      // ✅ FIXED: Use selectedLocation for fallback GeoJSON
       if (
         heatmapGeoJSON &&
         heatmapGeoJSON.features &&
@@ -483,7 +481,10 @@ export default function Home() {
         setGeojsonData(heatmapGeoJSON);
       } else {
         console.warn("No heatmap data received, using fallback");
-        const fallbackGeoJSON = generateDemoGeoJSON(lat, lng);
+        const fallbackGeoJSON = generateDemoGeoJSON(
+          selectedLocation.latitude,  // ✅ Fixed: using selectedLocation
+          selectedLocation.longitude   // ✅ Fixed: using selectedLocation
+        );
         setGeojsonData(fallbackGeoJSON);
         toast.warning("Using estimated heatmap data");
       }
@@ -952,10 +953,11 @@ export default function Home() {
               />
             </div>
 
-            {/* Main Grid */}
+            {/* Main Grid - 2 Columns */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column */}
-              <div className="lg:col-span-2 space-y-6">
+              {/* Left Column - Map, Chart, AI Analysis, Recommendations */}
+              <div className="lg:col-span-2 space-y-4">
+                {/* Heat Map */}
                 <Card className="shadow-sm">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
@@ -970,6 +972,7 @@ export default function Home() {
                   </CardHeader>
                   <CardContent>
                     <HeatMap
+                      key={location?.name || 'default'}
                       center={
                         location
                           ? [location.latitude, location.longitude]
@@ -997,17 +1000,22 @@ export default function Home() {
                   cityName={location?.name}
                 />
 
-                {/* ✅ AI Analysis - Directly under Temperature Chart with no gap */}
-                <div className="mt-2">
+                {/* ✅ AI Analysis - Moved here (under Temperature Chart) */}
+                <div className="mt-1">
                   <AIExplanation
                     analysis={aiAnalysis}
                     isLoading={isAiLoading || isAnalyzing}
                   />
                 </div>
+
+                {/* ✅ Recommendations - Moved here (under AI Analysis) */}
+                <div className="mt-1">
+                  <Recommendations riskLevel={riskData?.riskLevel || "LOW"} />
+                </div>
               </div>
 
-              {/* Right Column */}
-              <div className="space-y-6">
+              {/* Right Column - Risk Score, Trend, Vulnerability, Environmental */}
+              <div className="space-y-4">
                 <RiskScore
                   score={riskData?.riskScore || 0}
                   level={riskData?.riskLevel || "LOW"}
@@ -1030,8 +1038,6 @@ export default function Home() {
                 />
 
                 <EnvironmentalCard data={riskData?.environmental} />
-
-                <Recommendations riskLevel={riskData?.riskLevel || "LOW"} />
               </div>
             </div>
           </>
@@ -1056,7 +1062,7 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-2">
-<span className="text-xs text-slate-400">Built with ❤️ by</span>
+              <span className="text-xs text-slate-400">Built with ❤️ by</span>
               <span className="text-sm font-bold bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
                 Ultimate
               </span>

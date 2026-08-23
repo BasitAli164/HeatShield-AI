@@ -7,7 +7,6 @@ import { fortyGuardClient } from './client.js';
 import { pollActivityStatus } from './status.js';
 import { normalizeHeatmapResponse, extractHeatmapStatistics } from './normalizer.js';
 import { APIError } from '@/lib/errors.js';
-import { formatDateForAPI } from '@/lib/datetime.js';
 
 export async function requestHeatmap(parameters) {
   const {
@@ -23,15 +22,38 @@ export async function requestHeatmap(parameters) {
     throw new APIError('Valid polygon coordinates are required', 400, 'INVALID_POLYGON');
   }
 
-  // ✅ Fix: Format date correctly - FortyGuard expects YYYY-MM-DD
-  const formattedDateTime = dateTime || formatDateForAPI(new Date());
+  // ✅ Ensure date is in correct format
+  let formattedDateTime = dateTime;
+  if (!formattedDateTime) {
+    formattedDateTime = new Date().toISOString().split('T')[0];
+  }
+  
+  // ✅ If it's a string with time, extract just the date
+  if (typeof formattedDateTime === 'string' && formattedDateTime.includes('T')) {
+    formattedDateTime = formattedDateTime.split('T')[0];
+  }
+  
+  // ✅ Ensure it's YYYY-MM-DD
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(formattedDateTime)) {
+    // Try to parse as date and format
+    try {
+      const parsedDate = new Date(formattedDateTime);
+      if (!isNaN(parsedDate.getTime())) {
+        formattedDateTime = parsedDate.toISOString().split('T')[0];
+      } else {
+        formattedDateTime = new Date().toISOString().split('T')[0];
+      }
+    } catch (e) {
+      formattedDateTime = new Date().toISOString().split('T')[0];
+    }
+  }
 
   const payload = {
     polygon_aoi: {
       type: 'Polygon',
       coordinates: [polygon],
     },
-    date_time: formattedDateTime, // ✅ This should be a string like "2026-08-22"
+    date_time: formattedDateTime,
     granularity: granularity,
     analytic_type: analyticType,
   };

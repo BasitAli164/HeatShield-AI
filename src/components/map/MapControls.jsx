@@ -1,80 +1,72 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui/Button';
-import { ZoomIn, ZoomOut, Crosshair, Layers, Download, RefreshCw, MapPin } from 'lucide-react';
+import { ZoomIn, ZoomOut, Crosshair, Layers, RefreshCw, MapPin } from 'lucide-react';
 
 export default function MapControls({ 
   onZoomIn, 
   onZoomOut, 
   onReset, 
   onToggleLayer,
-  onDownload,
   onRefresh,
   onCenterLocation,
   isLoading = false,
   className = '',
 }) {
   return (
-    <div className={`absolute bottom-4 right-4 space-y-2 z-10 ${className}`}>
+    <div className={`absolute top-4 right-4 space-y-1 z-20 ${className}`}>
       <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-slate-200 p-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-9 h-9 p-0 hover:bg-slate-100"
+        <button
           onClick={onZoomIn}
+          className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded transition-colors text-slate-600 text-lg font-bold"
           title="Zoom In"
+          type="button"
         >
-          <ZoomIn className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-9 h-9 p-0 hover:bg-slate-100"
+          +
+        </button>
+        <button
           onClick={onZoomOut}
+          className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded transition-colors text-slate-600 text-lg font-bold"
           title="Zoom Out"
+          type="button"
         >
-          <ZoomOut className="h-4 w-4" />
-        </Button>
+          −
+        </button>
         <div className="border-t border-slate-200 my-1" />
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-9 h-9 p-0 hover:bg-slate-100"
+        <button
           onClick={onReset}
+          className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded transition-colors text-slate-600"
           title="Reset View"
+          type="button"
         >
           <Crosshair className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-9 h-9 p-0 hover:bg-slate-100"
+        </button>
+        <button
           onClick={onCenterLocation}
+          className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded transition-colors text-slate-600"
           title="Center on Location"
+          type="button"
         >
           <MapPin className="h-4 w-4" />
-        </Button>
+        </button>
         <div className="border-t border-slate-200 my-1" />
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-9 h-9 p-0 hover:bg-slate-100"
+        <button
           onClick={onToggleLayer}
+          className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded transition-colors text-slate-600"
           title="Toggle Layers"
+          type="button"
         >
           <Layers className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-9 h-9 p-0 hover:bg-slate-100"
+        </button>
+        <button
           onClick={onRefresh}
           disabled={isLoading}
+          className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded transition-colors text-slate-600 disabled:opacity-50"
           title="Refresh"
+          type="button"
         >
           <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-        </Button>
+        </button>
       </div>
     </div>
   );
