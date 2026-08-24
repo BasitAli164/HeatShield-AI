@@ -12,29 +12,23 @@ import {
   Lightbulb,
   ChevronDown,
   ChevronUp,
-  CheckCircle2
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-// ✅ Helper function to clean and format AI text
+// Helper function to clean and format AI text
 const formatAIText = (text) => {
   if (!text) return '';
   
-  // Remove markdown bold/italic markers
   let cleaned = text
-    .replace(/\*\*/g, '') // Remove **
-    .replace(/\*/g, '')   // Remove *
-    .replace(/__/g, '')   // Remove __
-    .replace(/_/g, '');   // Remove _
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .replace(/__/g, '')
+    .replace(/_/g, '');
   
-  // Clean up extra spaces
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
   
-  // Split into sentences and format
   const sentences = cleaned.split(/(?<=[.!?])\s+/);
-  
-  // Format each sentence with proper capitalization
   const formatted = sentences.map((s, index) => {
-    // Capitalize first letter
     const trimmed = s.trim();
     if (!trimmed) return '';
     const capitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
@@ -44,11 +38,10 @@ const formatAIText = (text) => {
   return formatted.join('. ');
 };
 
-// ✅ Helper to render text with proper formatting
+// Helper to render text with proper formatting
 const renderFormattedText = (text) => {
   if (!text) return null;
   
-  // Split by periods, exclamation marks, question marks
   const sentences = text.split(/(?<=[.!?])\s+/).filter(s => s.trim());
   
   if (sentences.length <= 1) {
@@ -60,7 +53,6 @@ const renderFormattedText = (text) => {
       {sentences.map((sentence, index) => {
         const trimmed = sentence.trim();
         if (!trimmed) return null;
-        // Clean any remaining markdown
         const clean = trimmed.replace(/\*\*/g, '').replace(/\*/g, '').trim();
         return (
           <li key={index} className="text-sm text-slate-700 flex items-start space-x-2">
@@ -73,15 +65,19 @@ const renderFormattedText = (text) => {
   );
 };
 
+// ✅ Check if environmental data is available
+const hasEnvironmentalData = (envData) => {
+  if (!envData) return false;
+  return envData.heatIndex || envData.humidity || envData.airQuality;
+};
+
 export default function AIExplanation({ 
   analysis, 
   isLoading = false,
+  environmental = null,
   className = '',
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
-
-  console.log('[AIExplanation] Received analysis:', analysis);
-  console.log('[AIExplanation] isLoading:', isLoading);
 
   // If loading, show loading state
   if (isLoading) {
@@ -113,7 +109,7 @@ export default function AIExplanation({
   if (analysis) {
     const structured = analysis.structured || {};
     
-    // ✅ Clean the text content
+    // Clean the text content
     const explanation = formatAIText(structured.explanation || analysis.analysis || '');
     const affected = formatAIText(structured.affected || '');
     const recommendations = formatAIText(structured.recommendations || '');
@@ -148,6 +144,11 @@ export default function AIExplanation({
                   AI Powered
                 </Badge>
               )}
+              {!hasEnvironmentalData(environmental) && (
+                <Badge variant="outline" className="ml-2 text-[10px] text-orange-500 border-orange-200">
+                  Limited Data
+                </Badge>
+              )}
             </CardTitle>
             <Button
               variant="ghost"
@@ -162,6 +163,20 @@ export default function AIExplanation({
         <CardContent>
           {isExpanded && (
             <div className="space-y-4">
+              {/* Environmental Data Status */}
+              {environmental && (
+                <div className="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                  <p className="text-[10px] text-slate-500">
+                    Environmental Data: {hasEnvironmentalData(environmental) ? '✅ Available' : '⚠️ Limited'}
+                    {hasEnvironmentalData(environmental) && (
+                      <span className="ml-2">
+                        (Heat Index: {environmental.heatIndex}°C, Humidity: {environmental.humidity}%, AQI: {environmental.airQuality})
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+
               {/* Risk Explanation */}
               {hasExplanation && (
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
@@ -219,15 +234,6 @@ export default function AIExplanation({
                 </div>
               )}
 
-              {/* Raw analysis fallback (if no structured sections) */}
-              {!hasExplanation && !hasAffected && !hasRecommendations && analysis.analysis && (
-                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                  <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                    {formatAIText(analysis.analysis)}
-                  </div>
-                </div>
-              )}
-
               {/* Metadata */}
               {analysis.metadata && (
                 <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-200 pt-2 mt-2">
@@ -256,7 +262,7 @@ export default function AIExplanation({
         <div className="flex items-center justify-center py-8 text-slate-500">
           <div className="text-center">
             <Sparkles className="h-10 w-10 mx-auto mb-3 opacity-30" />
-<p className="text-sm">Click &quot;Analyze Location&quot; to get AI insights</p>
+            <p className="text-sm">Click "Analyze Location" to get AI insights</p>
             <p className="text-xs mt-1">Powered by Groq AI</p>
           </div>
         </div>

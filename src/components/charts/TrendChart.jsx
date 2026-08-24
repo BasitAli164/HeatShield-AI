@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Card as UICard } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { 
   TrendingUp, 
@@ -11,9 +10,7 @@ import {
   Clock, 
   Calendar,
   Thermometer,
-  AlertTriangle
 } from 'lucide-react';
-import { getTemperatureColor, formatTemperature } from '@/lib/geo/heatmap-utils';
 
 export default function TrendChart({ 
   historicalData = [],
@@ -54,20 +51,20 @@ export default function TrendChart({
 
   if (isLoading) {
     return (
-      <UICard>
+      <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium">Trend Analysis</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-40 bg-slate-100 animate-pulse rounded-lg"></div>
         </CardContent>
-      </UICard>
+      </Card>
     );
   }
 
   if (!stats) {
     return (
-      <UICard>
+      <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium">Trend Analysis</CardTitle>
         </CardHeader>
@@ -79,9 +76,13 @@ export default function TrendChart({
             </div>
           </div>
         </CardContent>
-      </UICard>
+      </Card>
     );
   }
+
+  // Use trend from props or calculated
+  const trendData = trend || stats;
+  const currentTempValue = typeof currentTemp === 'number' ? currentTemp : parseFloat(currentTemp) || stats.last;
 
   const trendConfigs = {
     rising: { 
@@ -125,7 +126,7 @@ export default function TrendChart({
   const forecastSummary = getForecastSummary();
 
   return (
-    <UICard>
+    <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium flex items-center">
           <TrendIcon className={`h-4 w-4 mr-2 ${trendConfig.color}`} />
@@ -154,7 +155,7 @@ export default function TrendChart({
           </div>
           <div className="text-center p-2 bg-slate-50 rounded-lg">
             <p className="text-[10px] text-slate-500">Current</p>
-            <p className="font-bold text-slate-900">{stats.last.toFixed(1)}°</p>
+            <p className="font-bold text-slate-900">{currentTempValue.toFixed(1)}°</p>
           </div>
           <div className="text-center p-2 bg-slate-50 rounded-lg">
             <p className="text-[10px] text-slate-500">Change</p>
@@ -195,24 +196,24 @@ export default function TrendChart({
         )}
 
         {/* Risk Indication */}
-        {currentTemp && (
+        {currentTempValue && (
           <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Thermometer className="h-4 w-4 text-slate-400" />
               <span className="text-xs text-slate-500">Current Risk Level</span>
             </div>
             <Badge 
-              className={currentTemp >= 40 ? 'bg-red-500 text-white' : 
-                         currentTemp >= 35 ? 'bg-orange-500 text-white' :
-                         currentTemp >= 30 ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white'}
+              className={currentTempValue >= 40 ? 'bg-red-500 text-white' : 
+                         currentTempValue >= 35 ? 'bg-orange-500 text-white' :
+                         currentTempValue >= 30 ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white'}
             >
-              {currentTemp >= 40 ? 'CRITICAL' : 
-               currentTemp >= 35 ? 'HIGH' :
-               currentTemp >= 30 ? 'MEDIUM' : 'LOW'}
+              {currentTempValue >= 40 ? 'CRITICAL' : 
+               currentTempValue >= 35 ? 'HIGH' :
+               currentTempValue >= 30 ? 'MEDIUM' : 'LOW'}
             </Badge>
           </div>
         )}
       </CardContent>
-    </UICard>
+    </Card>
   );
 }

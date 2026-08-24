@@ -16,7 +16,7 @@ import {
   Area,
   ComposedChart
 } from 'recharts';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, Clock, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Clock } from 'lucide-react';
 import { getTemperatureColor, formatTemperature } from '@/lib/geo/heatmap-utils';
 import { formatTimeWithTimezone, getCityTimezone } from '@/lib/datetime';
 
@@ -192,7 +192,7 @@ export default function TemperatureChart({
     return [Math.max(0, Math.floor(min)), Math.ceil(max)];
   };
 
-  // ✅ Format x-axis with timezone
+  // Format x-axis with timezone
   const formatXAxis = (time) => {
     return formatTimeWithTimezone(time, cityName);
   };
@@ -226,7 +226,7 @@ export default function TemperatureChart({
             <div className="text-center text-slate-400">
               <Clock className="h-10 w-10 mx-auto mb-2 opacity-50" />
               <p className="text-sm">No temperature data available</p>
-<p className="text-sm">Click &quot;Analyze Location&quot; to load data</p>
+              <p className="text-xs mt-1">Click "Analyze Location" to load data</p>
             </div>
           </div>
         </CardContent>
@@ -248,7 +248,7 @@ export default function TemperatureChart({
             )}
             {currentTemp && (
               <Badge variant="outline" className="text-xs">
-                Current: {currentTemp}°C
+                Current: {typeof currentTemp === 'number' ? currentTemp.toFixed(1) : currentTemp}°C
               </Badge>
             )}
           </div>
@@ -338,11 +338,11 @@ export default function TemperatureChart({
               
               {currentTemp && (
                 <ReferenceLine 
-                  y={currentTemp} 
+                  y={typeof currentTemp === 'number' ? currentTemp : parseFloat(currentTemp)} 
                   stroke="#ef4444" 
                   strokeDasharray="3 3"
                   label={{
-                    value: `Current ${currentTemp}°C`,
+                    value: `Current ${typeof currentTemp === 'number' ? currentTemp.toFixed(1) : currentTemp}°C`,
                     position: 'right',
                     fill: '#ef4444',
                     fontSize: 10,
@@ -380,4 +380,4 @@ export default function TemperatureChart({
       </CardContent>
     </Card>
   );
-} 
+}

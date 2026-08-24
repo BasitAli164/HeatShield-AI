@@ -23,7 +23,6 @@ import { cn } from '@/lib/utils';
 // ✅ Helper function to clean AI text
 const cleanText = (text) => {
   if (!text) return '';
-  // Remove markdown formatting
   return text
     .replace(/\*\*/g, '')
     .replace(/\*/g, '')
@@ -38,42 +37,59 @@ const cleanText = (text) => {
 const formatRecommendation = (text) => {
   if (!text) return '';
   let cleaned = cleanText(text);
-  // Remove leading dash, bullet, or number
   cleaned = cleaned.replace(/^[-•*]\s*/, '').replace(/^[0-9]+\.\s*/, '');
-  // Capitalize first letter
   if (cleaned.length > 0) {
     cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
   }
   return cleaned;
 };
 
-const PRIORITY_CONFIG = {
-  high: { label: 'High Priority', color: 'text-red-600 bg-red-50 border-red-200', icon: Flame },
-  medium: { label: 'Medium Priority', color: 'text-orange-600 bg-orange-50 border-orange-200', icon: AlertCircle },
-  low: { label: 'Low Priority', color: 'text-blue-600 bg-blue-50 border-blue-200', icon: CheckCircle2 },
-  general: { label: 'General', color: 'text-slate-600 bg-slate-50 border-slate-200', icon: Shield },
-};
+// ✅ Generate recommendations based on risk level and temperature
+const generateRecommendations = (riskLevel, temperature) => {
+  const temp = typeof temperature === 'number' ? temperature : parseFloat(temperature) || 0;
+  
+  const recommendations = {
+    high: [],
+    medium: [],
+    low: [],
+    general: [],
+  };
 
-const FALLBACK_RECOMMENDATIONS = {
-  high: [
-    'Avoid all non-essential outdoor activities',
-    'Seek immediate cooling if outdoors',
-    'Watch for signs of heat stroke',
-  ],
-  medium: [
-    'Stay in air-conditioned spaces when possible',
-    'Drink water every 15-20 minutes if outdoors',
-    'Monitor for signs of heat exhaustion',
-  ],
-  low: [
-    'Check on elderly and vulnerable neighbors',
-    'Stay hydrated throughout the day',
-    'Limit outdoor activities during peak hours',
-  ],
-  general: [
-    'Stay informed about weather conditions',
-    'Plan activities during cooler hours',
-  ],
+  // Temperature-based recommendations
+  if (temp >= 40) {
+    recommendations.high.push('Seek immediate cooling - temperature exceeds 40°C');
+    recommendations.high.push('Avoid all non-essential outdoor activities');
+  } else if (temp >= 35) {
+    recommendations.high.push('Avoid outdoor activities during peak heat');
+    recommendations.medium.push('Stay in air-conditioned spaces when possible');
+  } else if (temp >= 30) {
+    recommendations.medium.push('Limit outdoor activities during peak hours (12-4 PM)');
+    recommendations.medium.push('Increase water intake');
+  } else if (temp >= 25) {
+    recommendations.low.push('Stay hydrated if outdoors');
+    recommendations.low.push('Check on vulnerable individuals');
+  } else {
+    recommendations.general.push('Continue monitoring temperature conditions');
+  }
+
+  // Risk level based recommendations
+  if (riskLevel === 'CRITICAL') {
+    recommendations.high.push('Watch for signs of heat stroke');
+    recommendations.high.push('Emergency response may be needed');
+    recommendations.high.push('Check on vulnerable individuals immediately');
+  } else if (riskLevel === 'HIGH') {
+    recommendations.medium.push('Monitor for signs of heat exhaustion');
+    recommendations.medium.push('Check on elderly and vulnerable neighbors');
+  } else if (riskLevel === 'MEDIUM') {
+    recommendations.low.push('Seek shade when outdoors');
+    recommendations.low.push('Check on vulnerable individuals');
+  }
+
+  // General recommendations
+  recommendations.general.push('Stay informed about weather conditions');
+  recommendations.general.push('Plan activities during cooler hours');
+
+  return recommendations;
 };
 
 export default function Recommendations({ 
@@ -82,13 +98,19 @@ export default function Recommendations({
   isLoading = false,
   className = '',
 }) {
-  const [recommendations, setRecommendations] = useState(FALLBACK_RECOMMENDATIONS);
+  const [recommendations, setRecommendations] = useState(null);
   const [isExpanded, setIsExpanded] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const [isAiEnhanced, setIsAiEnhanced] = useState(false);
 
   useEffect(() => {
     if (riskLevel && !isLoading) {
+      // Use deterministic recommendations based on risk level and temperature
+      const deterministicRecs = generateRecommendations(riskLevel, temperature);
+      setRecommendations(deterministicRecs);
+      setIsAiEnhanced(false);
+      
+      // Try to fetch AI enhanced recommendations
       fetchRecommendations();
     }
   }, [riskLevel, temperature, isLoading]);
@@ -110,68 +132,58 @@ export default function Recommendations({
 
       if (response.ok) {
         const data = await response.json();
-        if (data.recommendations) {
-          if (Array.isArray(data.recommendations)) {
-            // Format and categorize recommendations
-            const formatted = {
-              high: [],
-              medium: [],
-              low: [],
-              general: [],
-            };
-            
-            // Clean each recommendation
-            const cleaned = data.recommendations.map(r => formatRecommendation(r)).filter(r => r);
-            
-            // Distribute based on content hints or evenly
-            cleaned.forEach((rec, index) => {
-              const lower = rec.toLowerCase();
-              if (lower.includes('immediate') || lower.includes('urgent') || lower.includes('emergency') || lower.includes('avoid')) {
-                formatted.high.push(rec);
-              } else if (lower.includes('monitor') || lower.includes('check') || lower.includes('watch') || lower.includes('limit')) {
-                formatted.medium.push(rec);
-              } else if (lower.includes('consider') || lower.includes('plan') || lower.includes('prepare')) {
-                formatted.low.push(rec);
-              } else {
-                // Distribute remaining evenly
-                if (index % 4 === 0) formatted.high.push(rec);
-                else if (index % 4 === 1) formatted.medium.push(rec);
-                else if (index % 4 === 2) formatted.low.push(rec);
-                else formatted.general.push(rec);
-              }
-            });
-            
-            setRecommendations(formatted);
-            setIsAiEnhanced(data.source === 'ai');
-          } else {
-            // Handle structured recommendations
-            const formatted = {
-              high: (data.recommendations.high || []).map(r => formatRecommendation(r)).filter(r => r),
-              medium: (data.recommendations.medium || []).map(r => formatRecommendation(r)).filter(r => r),
-              low: (data.recommendations.low || []).map(r => formatRecommendation(r)).filter(r => r),
-              general: (data.recommendations.general || []).map(r => formatRecommendation(r)).filter(r => r),
-            };
+        if (data.recommendations && Array.isArray(data.recommendations) && data.recommendations.length > 0) {
+          // Format and categorize recommendations
+          const formatted = {
+            high: [],
+            medium: [],
+            low: [],
+            general: [],
+          };
+          
+          const cleaned = data.recommendations.map(r => formatRecommendation(r)).filter(r => r);
+          
+          cleaned.forEach((rec, index) => {
+            const lower = rec.toLowerCase();
+            if (lower.includes('immediate') || lower.includes('urgent') || lower.includes('emergency') || lower.includes('avoid') || lower.includes('seek')) {
+              formatted.high.push(rec);
+            } else if (lower.includes('monitor') || lower.includes('check') || lower.includes('watch') || lower.includes('limit') || lower.includes('stay')) {
+              formatted.medium.push(rec);
+            } else if (lower.includes('consider') || lower.includes('plan') || lower.includes('prepare') || lower.includes('hydrate')) {
+              formatted.low.push(rec);
+            } else {
+              formatted.general.push(rec);
+            }
+          });
+          
+          // Only use AI if we got meaningful recommendations
+          const totalAI = Object.values(formatted).reduce((sum, arr) => sum + arr.length, 0);
+          if (totalAI > 0) {
             setRecommendations(formatted);
             setIsAiEnhanced(data.source === 'ai');
           }
         }
       }
     } catch (error) {
-      console.warn('Failed to fetch recommendations, using fallback:', error);
-      setRecommendations(FALLBACK_RECOMMENDATIONS);
-      setIsAiEnhanced(false);
+      console.warn('AI recommendations failed, using deterministic:', error);
     } finally {
       setIsFetching(false);
     }
   };
 
-  const displayRecommendations = isLoading || isFetching ? FALLBACK_RECOMMENDATIONS : recommendations;
+  const displayRecommendations = isLoading || isFetching 
+    ? generateRecommendations(riskLevel, temperature) 
+    : recommendations || generateRecommendations(riskLevel, temperature);
 
-  // Filter out empty priority groups
   const hasRecommendations = Object.values(displayRecommendations).some(arr => arr.length > 0);
-
-  // Count total recommendations
   const totalCount = Object.values(displayRecommendations).reduce((sum, arr) => sum + arr.length, 0);
+
+  const PRIORITY_CONFIG = {
+    high: { label: 'High Priority', color: 'text-red-600 bg-red-50 border-red-200', icon: Flame },
+    medium: { label: 'Medium Priority', color: 'text-orange-600 bg-orange-50 border-orange-200', icon: AlertCircle },
+    low: { label: 'Low Priority', color: 'text-blue-600 bg-blue-50 border-blue-200', icon: CheckCircle2 },
+    general: { label: 'General', color: 'text-slate-600 bg-slate-50 border-slate-200', icon: Shield },
+  };
 
   if (!hasRecommendations && !isLoading) {
     return (
@@ -238,7 +250,6 @@ export default function Recommendations({
               const config = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.general;
               const Icon = config.icon;
               
-              // Clean and format each item
               const cleanItems = items.map(item => formatRecommendation(item)).filter(item => item);
               
               if (cleanItems.length === 0) return null;

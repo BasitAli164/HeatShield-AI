@@ -1005,6 +1005,8 @@ export default function Home() {
                   <AIExplanation
                     analysis={aiAnalysis}
                     isLoading={isAiLoading || isAnalyzing}
+                      environmental={riskData?.environmental}  // ✅ Pass environmental data
+
                   />
                 </div>
 
