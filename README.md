@@ -378,19 +378,15 @@ npm run start
 
 This project is created for **FortyGuard Hackathon '26**.
 
----
-
 ## 👥 Team
 
 **Team Ultimate** 🔥
 
-| Name | Role | 
-|------|------|--------|
-| **Basit Ali** | Team Lead / Full Stack Developer | 
-| **Rida Punnakkotil** | AI/ML Developer & Data Analyst | 
-| **Farheena Farooq** | Technical Writer & Presenter | 
-
----
+| Name | Role |
+|------|------|
+| **Basit Ali** | Team Lead / Full Stack Developer |
+| **Rida Punnakkotil** | AI/ML Developer & Data Analyst |
+| **Farheena Farooq** | Technical Writer & Presenter |
 
 ## 🙏 Acknowledgments
 
