@@ -18,8 +18,8 @@
 
 ## 🚀 Live Demo
 
-- **Deployed URL:** [https://heatshield-ai.vercel.app](https://heatshield-ai.vercel.app)
-- **Repository:** [https://github.com/yourusername/heatshield-ai](https://github.com/yourusername/heatshield-ai)
+- **Deployed URL:** [https://heat-shield-ai-dusky.vercel.app/](https://heat-shield-ai-dusky.vercel.app/)
+- **Repository:** [https://github.com/BasitAli164/HeatShield-AI](https://github.com/BasitAli164/HeatShield-AI)
 
 ---
 
@@ -388,7 +388,7 @@ This project is created for **FortyGuard Hackathon '26**.
 |------|------|--------|
 | **Basit Ali** | Team Lead / Full Stack Developer | 
 | **Rida Punnakkotil** | AI/ML Developer & Data Analyst | 
-| **Farheena Farooq** | Technical Writer & Presenter | 
+| **Farheena Farooq** | Resarcher,Technical Writer & Presenter | 
 
 ---
 
