@@ -388,7 +388,7 @@ This project is created for **FortyGuard Hackathon '26**.
 |------|------|--------|
 | **Basit Ali** | Team Lead / Full Stack Developer | 
 | **Rida Punnakkotil** | AI/ML Developer & Data Analyst | 
-| **Farheena Farooq** | Resarcher,Technical Writer & Presenter | 
+| **Farheena Farooq** | Technical Writer & Presenter | 
 
 ---
 
