@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import dynamic from 'next/dynamic';
+import dynamic from "next/dynamic";
 
 import {
   Thermometer,
@@ -39,7 +39,10 @@ import { DEFAULT_LOCATION } from "@/lib/constants";
 import { isUSLocation } from "@/lib/geo/coordinates";
 
 // Import vulnerability utilities
-import { identifyAffectedGroups, getVulnerabilitySummary } from "@/lib/risk/vulnerability";
+import {
+  identifyAffectedGroups,
+  getVulnerabilitySummary,
+} from "@/lib/risk/vulnerability";
 
 // Import timezone utilities
 import {
@@ -53,10 +56,9 @@ import {
 import { generateForecast, calculateTrend } from "@/lib/forecast/trend.js";
 
 // ✅ DYNAMIC IMPORT - HeatMap uses Leaflet which needs window
-const HeatMap = dynamic(
-  () => import('@/components/map/HeatMap'),
-  { ssr: false }
-);
+const HeatMap = dynamic(() => import("@/components/map/HeatMap"), {
+  ssr: false,
+});
 
 // Generate fallback demo data (only for error cases)
 const generateFallbackData = () => {
@@ -482,8 +484,8 @@ export default function Home() {
       } else {
         console.warn("No heatmap data received, using fallback");
         const fallbackGeoJSON = generateDemoGeoJSON(
-          selectedLocation.latitude,  // ✅ Fixed: using selectedLocation
-          selectedLocation.longitude   // ✅ Fixed: using selectedLocation
+          selectedLocation.latitude, // ✅ Fixed: using selectedLocation
+          selectedLocation.longitude, // ✅ Fixed: using selectedLocation
         );
         setGeojsonData(fallbackGeoJSON);
         toast.warning("Using estimated heatmap data");
@@ -625,12 +627,12 @@ export default function Home() {
       const affectedGroups = identifyAffectedGroups(
         riskResult.risk.level,
         riskRequest.temperature,
-        environmentalData
+        environmentalData,
       );
       const summary = getVulnerabilitySummary(
         riskResult.risk.level,
         riskRequest.temperature,
-        affectedGroups
+        affectedGroups,
       );
       setVulnerabilityData({ affectedGroups, summary });
       console.log("[Vulnerability] Affected groups:", affectedGroups);
@@ -972,7 +974,7 @@ export default function Home() {
                   </CardHeader>
                   <CardContent>
                     <HeatMap
-                      key={location?.name || 'default'}
+                      key={location?.name || "default"}
                       center={
                         location
                           ? [location.latitude, location.longitude]
@@ -1000,19 +1002,25 @@ export default function Home() {
                   cityName={location?.name}
                 />
 
-                {/* ✅ AI Analysis - Moved here (under Temperature Chart) */}
+                {/* ✅ AI Analysis - With environmental data */}
                 <div className="mt-1">
                   <AIExplanation
                     analysis={aiAnalysis}
                     isLoading={isAiLoading || isAnalyzing}
-                      environmental={riskData?.environmental}  // ✅ Pass environmental data
-
+                    environmental={riskData?.environmental}
                   />
                 </div>
 
                 {/* ✅ Recommendations - Moved here (under AI Analysis) */}
+                {/* ✅ Recommendations - Fixed temperature passing */}
                 <div className="mt-1">
-                  <Recommendations riskLevel={riskData?.riskLevel || "LOW"} />
+                  <Recommendations
+                    riskLevel={riskData?.riskLevel || "LOW"}
+                    temperature={
+                      temperatureData?.current || riskData?.temperature || 0
+                    }
+                    isLoading={isAnalyzing}
+                  />
                 </div>
               </div>
 
@@ -1049,7 +1057,10 @@ export default function Home() {
             <h3 className="text-xl font-semibold text-slate-600 mb-2">
               No City Selected
             </h3>
-            <p className="text-sm">Search for a city above and click &quot;Refresh Analysis&quot; to get started</p>
+            <p className="text-sm">
+              Search for a city above and click &quot;Refresh Analysis&quot; to
+              get started
+            </p>
           </div>
         )}
 

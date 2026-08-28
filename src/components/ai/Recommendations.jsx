@@ -16,7 +16,8 @@ import {
   ChevronUp,
   Clock,
   Flame,
-  Sparkles
+  Sparkles,
+  Thermometer
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +47,7 @@ const formatRecommendation = (text) => {
 
 // ✅ Generate recommendations based on risk level and temperature
 const generateRecommendations = (riskLevel, temperature) => {
+  // ✅ Ensure temperature is a valid number
   const temp = typeof temperature === 'number' ? temperature : parseFloat(temperature) || 0;
   
   const recommendations = {
@@ -55,16 +57,19 @@ const generateRecommendations = (riskLevel, temperature) => {
     general: [],
   };
 
-  // Temperature-based recommendations
+  // ✅ Temperature-based recommendations (using actual temperature)
   if (temp >= 40) {
     recommendations.high.push('Seek immediate cooling - temperature exceeds 40°C');
     recommendations.high.push('Avoid all non-essential outdoor activities');
+    recommendations.high.push('Emergency response may be needed');
   } else if (temp >= 35) {
-    recommendations.high.push('Avoid outdoor activities during peak heat');
+    recommendations.high.push('Avoid outdoor activities during peak heat (12-4 PM)');
     recommendations.medium.push('Stay in air-conditioned spaces when possible');
+    recommendations.medium.push('Drink water every 15-20 minutes if outdoors');
   } else if (temp >= 30) {
     recommendations.medium.push('Limit outdoor activities during peak hours (12-4 PM)');
     recommendations.medium.push('Increase water intake');
+    recommendations.low.push('Seek shade when outdoors');
   } else if (temp >= 25) {
     recommendations.low.push('Stay hydrated if outdoors');
     recommendations.low.push('Check on vulnerable individuals');
@@ -72,20 +77,22 @@ const generateRecommendations = (riskLevel, temperature) => {
     recommendations.general.push('Continue monitoring temperature conditions');
   }
 
-  // Risk level based recommendations
+  // ✅ Risk level based recommendations
   if (riskLevel === 'CRITICAL') {
     recommendations.high.push('Watch for signs of heat stroke');
-    recommendations.high.push('Emergency response may be needed');
     recommendations.high.push('Check on vulnerable individuals immediately');
+    recommendations.medium.push('Stay in air-conditioned spaces at all times');
   } else if (riskLevel === 'HIGH') {
     recommendations.medium.push('Monitor for signs of heat exhaustion');
     recommendations.medium.push('Check on elderly and vulnerable neighbors');
+    recommendations.low.push('Stay hydrated and cool');
   } else if (riskLevel === 'MEDIUM') {
-    recommendations.low.push('Seek shade when outdoors');
     recommendations.low.push('Check on vulnerable individuals');
+    recommendations.low.push('Stay hydrated');
+    recommendations.general.push('Be aware of heat warnings');
   }
 
-  // General recommendations
+  // ✅ General recommendations
   recommendations.general.push('Stay informed about weather conditions');
   recommendations.general.push('Plan activities during cooler hours');
 
@@ -102,6 +109,9 @@ export default function Recommendations({
   const [isExpanded, setIsExpanded] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const [isAiEnhanced, setIsAiEnhanced] = useState(false);
+
+  // ✅ Log the received temperature for debugging
+  console.log('[Recommendations] Received temperature:', temperature, 'Risk Level:', riskLevel);
 
   useEffect(() => {
     if (riskLevel && !isLoading) {
@@ -120,12 +130,15 @@ export default function Recommendations({
     
     setIsFetching(true);
     try {
+      // ✅ Ensure temperature is passed as a number
+      const tempValue = typeof temperature === 'number' ? temperature : parseFloat(temperature) || 0;
+      
       const response = await fetch('/api/recommendations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           riskLevel: riskLevel,
-          temperature: temperature || 0,
+          temperature: tempValue,  // ✅ Pass the actual temperature
           useAI: true,
         }),
       });
@@ -156,7 +169,6 @@ export default function Recommendations({
             }
           });
           
-          // Only use AI if we got meaningful recommendations
           const totalAI = Object.values(formatted).reduce((sum, arr) => sum + arr.length, 0);
           if (totalAI > 0) {
             setRecommendations(formatted);
@@ -184,6 +196,9 @@ export default function Recommendations({
     low: { label: 'Low Priority', color: 'text-blue-600 bg-blue-50 border-blue-200', icon: CheckCircle2 },
     general: { label: 'General', color: 'text-slate-600 bg-slate-50 border-slate-200', icon: Shield },
   };
+
+  // ✅ Show temperature badge
+  const tempDisplay = typeof temperature === 'number' ? temperature.toFixed(1) : temperature || '--';
 
   if (!hasRecommendations && !isLoading) {
     return (
@@ -244,6 +259,15 @@ export default function Recommendations({
       <CardContent>
         {isExpanded && (
           <div className="space-y-3">
+            {/* ✅ Temperature Display */}
+            <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-200">
+              <div className="flex items-center space-x-2">
+                <Thermometer className="h-3.5 w-3.5 text-red-500" />
+                <span>Current Temperature:</span>
+              </div>
+              <span className="font-bold text-slate-900">{tempDisplay}°C</span>
+            </div>
+
             {Object.entries(displayRecommendations).map(([priority, items]) => {
               if (!items || items.length === 0) return null;
               
